@@ -1,0 +1,9 @@
+venv
+.git
+.vscode
+__pycache__
+landing
+db-init
+docker-compose.yaml
+secrets.env
+logs
