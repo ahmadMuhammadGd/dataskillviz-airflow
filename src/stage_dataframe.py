@@ -16,6 +16,7 @@ from global_variables import (
     fasttext_model
 )
 
+import json 
 
 def get_csv_file(laning_path:str)->pd.DataFrame:
     files = glob(f"{laning_path}/*.csv")
@@ -91,7 +92,8 @@ def stage(df: pd.DataFrame, connection_string: str) -> bool:
         'description_tokens'
     ]
     df = df[columns]
-        
+    import ast
+    df['description_tokens'] = df['description_tokens'].apply(lambda x: ast.literal_eval(x) if pd.notna(x) else x) #quick fix
     chunk_size = 500
     try:
         with psycopg2.connect(connection_string) as conn:

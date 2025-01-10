@@ -35,11 +35,11 @@ CREATE TABLE IF NOT EXISTS warehouse.jobs_dim (
     job_id BIGSERIAL PRIMARY KEY,
     source_job_id TEXT UNIQUE NOT NULL,
     posted_at TIMESTAMP NOT NULL,
-    company_name VARCHAR(128) NOT NULL,
-    job_title VARCHAR(128) NOT NULL,
+    company_name VARCHAR(512) NOT NULL,
+    job_title VARCHAR(512) NOT NULL,
     description TEXT NOT NULL,
     description_tokens TEXT[] NOT NULL,
-    source VARCHAR(128) NOT NULL
+    source VARCHAR(512) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS warehouse.tag_jobs_fact (
@@ -57,10 +57,10 @@ CREATE TABLE IF NOT EXISTS warehouse.tag_jobs_fact (
 
 CREATE TABLE IF NOT EXISTS staging.gsearch_jobs (
     job_id BIGSERIAL PRIMARY KEY,
-    title VARCHAR(128) NOT NULL,
-    company_name VARCHAR(128) NOT NULL,
-    location VARCHAR(128) NOT NULL,
-    via VARCHAR(128) NOT NULL,
+    title VARCHAR(512) NOT NULL,
+    company_name VARCHAR(512) NOT NULL,
+    location VARCHAR(512) NOT NULL,
+    via VARCHAR(512) NOT NULL,
     description TEXT NOT NULL,
     source_job_id TEXT UNIQUE NOT NULL,
     date_time TIMESTAMP,

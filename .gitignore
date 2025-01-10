@@ -7,3 +7,4 @@ db-init
 docker-compose.yaml
 secrets.env
 logs
+.kaggle

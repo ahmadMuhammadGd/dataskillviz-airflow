@@ -3,7 +3,6 @@ from modules.vectorizer.fasttext import CustomFasttext
 from modules.interfaces.interfaces import Json_interface, Sql_interface
 from global_variables import (
     skills_cleaned_json_path,
-    model_directory,
     connection_string,
     dimensions_sql_path,
     fasttext_model
