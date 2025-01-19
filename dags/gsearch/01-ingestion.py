@@ -42,7 +42,7 @@ def ingest():
 
     @task
     def select_csv_file():
-        query = os.path.join(DOWNLOAD_PATH, "/*csv")
+        query = os.path.join(DOWNLOAD_PATH, "*csv")
         csv_files = glob.glob(query)
         
         if len(csv_files) == 0:
