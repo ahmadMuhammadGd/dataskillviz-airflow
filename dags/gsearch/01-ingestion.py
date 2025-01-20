@@ -16,6 +16,7 @@ from includes.global_variables.gsearch import (
     SUCCESS_INGESTION_DATASET
 )
 import pandas as pd 
+from airflow.models import Variable
 
 default_args = {
     'owner': 'airflow',
@@ -36,9 +37,18 @@ default_args = {
     doc_md=doc
 )
 def ingest():
-    @task
-    def ingest_gsearch_csv():
-        subprocess.run(["kaggle", "datasets", "download", "-d", DATASET_REF, "-p", DOWNLOAD_PATH, "--unzip"])
+    @task.bash
+    def ingest_gsearch_csv()->str:
+        kaggle_username = Variable.get('KAGGLE_USERNAME')
+        kaggle_key = Variable.get('KAGGLE_KEY')
+        
+        return f"""
+        export KAGGLE_USERNAME={kaggle_username}
+        export KAGGLE_KEY={kaggle_key}
+        export KAGGLE_CONFIG_DIR=/tmp/kaggle_config
+        mkdir -p $KAGGLE_CONFIG_DIR
+        kaggle datasets download -d {DATASET_REF} -p {DOWNLOAD_PATH} --unzip
+        """
 
     @task
     def select_csv_file():
@@ -83,8 +93,8 @@ def ingest():
     
     @task(outlets=[SUCCESS_INGESTION_DATASET])
     def update_airflow_dataset(file_to_ingest:str, **context):
-        outlet_events = context["outlet_events"].get(SUCCESS_INGESTION_DATASET, {})
-        outlet_events["extra"] = {"file_to_ingest": file_to_ingest}
+        outlet_events = context["outlet_events"][SUCCESS_INGESTION_DATASET]
+        outlet_events.extra = {"file_to_ingest": file_to_ingest}
     
     task_ingest_gsearch_csv     =   ingest_gsearch_csv()
     task_select_csv_file        =   select_csv_file()
