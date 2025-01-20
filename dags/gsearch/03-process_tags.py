@@ -4,7 +4,7 @@ load tags from `TAGS_LIST_URL`, get word embedding, and load them to tags dim
 
 
 from modules.title_seniority_extractor.extractor import Regex_extractor
-from modules.vectorizer.fasttext import CustomFasttext, SemanticPreprocessor
+from modules.vectorizer.fasttext import CustomFasttext
 
 
 import logging
@@ -66,7 +66,7 @@ def load():
         
         with conn.cursor() as cur:
             for batch_start in range(0, len(tags_list), batch_size):
-                rows = [(tag, vectorizer.get_vector(tag)) for tag in tags_list[batch_start:batch_start + batch_size]]    
+                rows = [(tag, [float(v) for v in vectorizer.get_vector(tag)]) for tag in tags_list[batch_start:batch_start + batch_size]]    
                 execute_values(cur, sql_transformation, rows)
             conn.commit()
         conn.close()

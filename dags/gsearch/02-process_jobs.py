@@ -4,7 +4,6 @@ Process new rows and stage them into the db
 
 
 from modules.title_seniority_extractor.extractor import Regex_extractor
-from modules.vectorizer.fasttext import CustomFasttext, SemanticPreprocessor
 from modules.tags_extractor.extractor import DictionaryBasedTagExtractor
 
 from airflow.decorators import dag, task
@@ -56,7 +55,7 @@ def stage():
         title_seniority_extractor = Regex_extractor()
         tags_extractor = DictionaryBasedTagExtractor(REVERSE_DICTIONARY_URL)
         def transform(chunk:pd.DataFrame):
-            chunk["cleaned_title", "cleaned_seniority"] = chunk.apply(
+            chunk[["cleaned_title", "cleaned_seniority"]] = chunk.apply(
                     lambda row: title_seniority_extractor.extract(
                         row['title'], 
                         row['description']
@@ -105,8 +104,9 @@ def stage():
         conn = pg_hook.get_conn()
         
         with conn.cursor() as cur:
-            for chunk in pd.read_csv(file_path, chunksize=chunk_size, usecols=columns):
+            for chunk in pd.read_csv(file_path, chunksize=chunk_size):
                 transformed_chunk = transform(chunk)
+                transformed_chunk = transformed_chunk[columns]
                 values = [tuple(row) for row in transformed_chunk.itertuples(index=False)]
                 execute_values(cur, query, values)
                 conn.commit()
