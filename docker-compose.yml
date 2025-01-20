@@ -172,6 +172,22 @@ services:
       - bash
       - airflow
 
+  testdb:
+    image: ankane/pgvector
+    container_name: pg_vector
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: testdb
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 60s
+      retries: 5
+      start_period: 80s
 
 volumes:
   postgres-db-volume:
