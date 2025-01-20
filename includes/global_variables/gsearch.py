@@ -14,8 +14,8 @@ SKILL_REPORT_SQL            =   "/opt/airflow/includes/mart/4-frequency_report.s
 
 # Links
 FASTTEXT_MODEL_URL          =   "https://github.com/ahmadMuhammadGd/skillVector-assets/raw/refs/heads/main/ft_tuned_compress_model_v02.bin"
-TAGS_LIST_URL               =   "https://github.com/ahmadMuhammadGd/skillVector-assets/raw/refs/heads/main/limited_reverse_dict.json"
-REVERSE_DICTIONARY_URL      =   "https://github.com/ahmadMuhammadGd/skillVector-assets/raw/refs/heads/main/limited_tags_list.json"
+TAGS_LIST_URL               =   "https://github.com/ahmadMuhammadGd/skillVector-assets/raw/refs/heads/main/limited_tags_list.json"
+REVERSE_DICTIONARY_URL      =   "https://github.com/ahmadMuhammadGd/skillVector-assets/raw/refs/heads/main/limited_reverse_dict.json"
 
 # Datasets
 SUCCESS_INGESTION_DATASET                   =   Dataset("INFO://gsearch_success_ingestion")
