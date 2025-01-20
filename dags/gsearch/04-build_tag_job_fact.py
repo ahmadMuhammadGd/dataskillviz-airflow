@@ -57,7 +57,7 @@ def build_fact():
                     ) :: DATE
                     AS max_updated_at
                 FROM
-                warehouse.tag_jobs_fact 
+                warehouse.tags_jobs_fact 
             )
         WHERE 
             max_updated_at = CURRENT_DATE;

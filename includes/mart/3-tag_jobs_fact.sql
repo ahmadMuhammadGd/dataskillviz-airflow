@@ -1,4 +1,4 @@
-INSERT INTO warehouse.tag_jobs_fact (tag_id, job_id, job_title_id, seniority_id, updated_at)
+INSERT INTO warehouse.tags_jobs_fact (tag_id, job_id, job_title_id, seniority_id, updated_at)
 SELECT 
     t.tag_id,
     g.job_id,

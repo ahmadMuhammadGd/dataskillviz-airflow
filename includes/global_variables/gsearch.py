@@ -9,7 +9,7 @@ DOWNLOAD_PATH               =   "/opt/airflow/temp_gsearch"
 BUILD_GSEARCH_DATAMART_SQL  =   "./includes/mart/0-wh_ddl.sql"
 JOB_DIM_LOAD_SQL_PATH       =   "./includes/mart/1-jobs_dim.sql"
 TAGS_DIM_SQL_PATH           =   "./includes/mart/2-tags_dim.sql"
-TAGS_JOBS_FACT_SQL          =   "./includes/mart/3-tag_jobs_fact.sql"
+TAGS_JOBS_FACT_SQL          =   "./includes/mart/3-tags_jobs_fact.sql"
 SKILL_REPORT_SQL            =   "./includes/mart/4-frequency_report.sql"
 
 # Links

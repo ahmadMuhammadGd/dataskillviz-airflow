@@ -6,7 +6,7 @@ SELECT
     , tl.title 
     , COUNT(*) as occurance
 FROM
-    warehouse.tag_jobs_fact f 
+    warehouse.tags_jobs_fact f 
 LEFT JOIN 
     warehouse.tags_dim td 
 ON

@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS warehouse.jobs_dim (
     source VARCHAR(512) NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS warehouse.tag_jobs_fact (
+CREATE TABLE IF NOT EXISTS warehouse.tags_jobs_fact (
     tag_id BIGINT NOT NULL,
     job_id BIGINT NOT NULL,
     job_title_id SMALLINT NOT NULL,
