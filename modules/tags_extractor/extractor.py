@@ -1,6 +1,7 @@
 import requests
 from modules.text_cleaner.cleaner import TextCleaner
 from abc import ABC, abstractmethod
+import logging 
 
 class TagExtractor(ABC):
     @abstractmethod
@@ -14,15 +15,20 @@ class DictionaryBasedTagExtractor(TagExtractor):
         self.text_cleaner       =   TextCleaner()
     
         self.__init_reverse_dict()
+        self.ngram_min, self.ngram_max = self._get_min_max_ngram()
 
     def __init_reverse_dict(self):
         response = requests.get(self.reverse_dict_uri)
         if response.status_code == 200:
             self.reverse_dict = response.json()
+            
+            logging.debug(f'reverse dict: {self.reverse_dict} ..')
+            if not isinstance(self.reverse_dict, dict):
+                raise Exception(f"expected dict, check reverse dict url and try again")
         else:
             raise Exception(f"An error occured while ingesting `reverse dict`, status code: {response.status_code}")
          
-    def _get_max_min_ngram(self) -> tuple[int, int]:
+    def _get_min_max_ngram(self) -> tuple[int, int]:
         keys = self.reverse_dict.keys()
         return min(len(x.split()) for x in keys), max(len(x.split()) for x in keys)
 
