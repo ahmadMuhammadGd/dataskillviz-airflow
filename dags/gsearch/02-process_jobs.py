@@ -115,22 +115,15 @@ def stage():
 
     
     
-    @task
-    def load_dimension():
-        sql_transformation = None 
-        with open(JOB_DIM_LOAD_SQL_PATH, 'r') as f:
-            sql_transformation = f.read()
-        
-        return PostgresOperator(
-            task_id='load_dimension_task',
+    task_load_dimension = PostgresOperator(
+            task_id='load_dimension',
             postgres_conn_id=POSTGRESQL_CONNECTION_ID,
-            sql=sql_transformation
+            sql= open(JOB_DIM_LOAD_SQL_PATH, 'r').read()
         )
         
         
     task_get_file_name      =   get_file_name()
     task_stage_data_to_db   =   stage_data_to_db(task_get_file_name)
-    task_load_dimension     =   load_dimension()
     
     task_get_file_name      >> task_stage_data_to_db
     task_stage_data_to_db   >> task_load_dimension

@@ -51,16 +51,15 @@ def build_fact():
             (
                 SELECT 
                     COALESCE(
-                        EXTRACT(DATE FROM MAX(updated_at))
-                        ,
-                        '01-01-1999' 
-                    ) :: DATE
-                    AS max_updated_at
+                        MAX(updated_at)::DATE,
+                        DATE '1999-01-01'
+                    ) AS max_updated_at
                 FROM
-                warehouse.tags_jobs_fact 
-            )
+                    warehouse.tags_jobs_fact 
+            ) subquery
         WHERE 
             max_updated_at = CURRENT_DATE;
+
         """
 
         hook = PostgresHook(postgres_conn_id=POSTGRESQL_CONNECTION_ID)
@@ -76,7 +75,7 @@ def build_fact():
     def update_success(**context):
         import datetime
         outlet_events = context["outlet_events"].get(SUCCESS_INGESTION_DATASET, {})
-        outlet_events["extra"] = {"update time": datetime.datetime.now()}
+        outlet_events.extra = {"update time": datetime.datetime.now()}
     
     
     task_update_success     = update_success()
