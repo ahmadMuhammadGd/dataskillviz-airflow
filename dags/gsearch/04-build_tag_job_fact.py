@@ -7,12 +7,13 @@ from airflow.decorators import dag, task
 from airflow.utils.dates import days_ago, timedelta
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-
+from airflow.operators.empty import EmptyOperator
 from includes.global_variables.gsearch import (
     POSTGRESQL_CONNECTION_ID,
     SUCCESS_INGESTION_DATASET,
     TAGS_JOBS_FACT_SQL,
-    SUCCESS_TAGS_JOBS_FACT_INSERTION_DATASET
+    SUCCESS_TAGS_JOBS_FACT_INSERTION_DATASET,
+    REDUCED_TAGS_JOBS_FACT_SQL
 )
 
 default_args = {
@@ -36,7 +37,7 @@ default_args = {
 def build_fact():
     
     task_run_jobs_tags_fact_sql = PostgresOperator(
-        task_id='task_run_jobs_tags_fact_sql',
+        task_id='run_jobs_tags_fact_sql',
         sql=open(TAGS_JOBS_FACT_SQL, 'r').read(),
         postgres_conn_id=POSTGRESQL_CONNECTION_ID,
         autocommit=True  
@@ -65,23 +66,32 @@ def build_fact():
         hook = PostgresHook(postgres_conn_id=POSTGRESQL_CONNECTION_ID)
         result = hook.get_first(sql_check)[0]
         if result:
-            logging.info('new rows have been inserted, triggering downstream dags')
-            return 'update_success'
+            logging.info('new rows have been inserted, triggering downstream tasks')
+            return 'run_reduced_jobs_tags_fact_sql'
         else:
             logging.info('no rows have been inserted.')
+            return 'no_op_task'
             
+    task_run_reduced_jobs_tags_fact_sql = PostgresOperator(
+        task_id='run_reduced_jobs_tags_fact_sql',
+        sql=open(REDUCED_TAGS_JOBS_FACT_SQL, 'r').read(),
+        postgres_conn_id=POSTGRESQL_CONNECTION_ID,
+        autocommit=True  
+    )
     
+    no_op_task = EmptyOperator(task_id='no_op_task')
+
     @task(outlets=[SUCCESS_TAGS_JOBS_FACT_INSERTION_DATASET])
     def update_success(**context):
         import datetime
         outlet_events = context["outlet_events"].get(SUCCESS_INGESTION_DATASET, {})
         outlet_events.extra = {"update time": datetime.datetime.now()}
     
-    
     task_update_success     = update_success()
     task_check_insertion    = check_for_new_insertions()
     
-    task_run_jobs_tags_fact_sql     >> task_check_insertion 
-    task_check_insertion            >> task_update_success
+    task_run_jobs_tags_fact_sql         >> task_check_insertion 
+    task_check_insertion                >> [task_run_reduced_jobs_tags_fact_sql, no_op_task]
+    task_run_reduced_jobs_tags_fact_sql >> task_update_success
     
 build_fact()
