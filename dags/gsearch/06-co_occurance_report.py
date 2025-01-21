@@ -1,16 +1,36 @@
-doc = '''
+doc = """
+### Tool Frequency Pattern Growth Report
 
-'''
+This DAG identifies frequent patterns in `tags_list` from `reduced_tags_jobs_fact` 
+using the FP-Growth algorithm. The results are transformed into a network graph 
+and stored in `warehouse.tags_fp_growth`.
 
-from airflow.decorators import dag, task
-from airflow.utils.dates import days_ago, timedelta
-from airflow.providers.postgres.operators.postgres import PostgresOperator
+#### Steps:
+1. Fetch data from `warehouse.reduced_tags_jobs_fact`.
+2. Run FP-Growth to identify frequent patterns.
+3. Transform patterns into edge structure for network graphs.
+4. Load results into `warehouse.tags_fp_growth`.
 
+**Schedule**: Triggered after successful insertion into `tags_jobs_fact`.
+"""
+
+
+from psycopg2.extras import execute_values
+import pandas as pd 
+from mlxtend.frequent_patterns import fpgrowth
+from mlxtend.preprocessing import TransactionEncoder
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 from includes.global_variables.gsearch import (
     POSTGRESQL_CONNECTION_ID,
-    SKILL_REPORT_SQL,
+    FP_GROWTH_REPORT_SQL,
     SUCCESS_TAGS_JOBS_FACT_INSERTION_DATASET
 )
+from airflow.decorators import dag, task
+from airflow.utils.dates import days_ago, timedelta
+
+from typing import List, Any
+from itertools import combinations
+
 
 default_args = {
     'owner': 'airflow',
@@ -31,6 +51,73 @@ default_args = {
     doc_md=doc
 )
 def build_report():
-    pass
+    def fetch_upstream_data() -> list[list[int]]:
+        '''
+        read tags_list from tags_jobs_reduced table
+        '''
+        pg_hook = PostgresHook.get_hook(POSTGRESQL_CONNECTION_ID)
+        conn = pg_hook.get_conn()
+        sql = """
+            SELECT 
+                tags_list
+            FROM 
+                warehouse.reduced_tags_jobs_fact
+        """
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            result = cur.fetchall()
+        # result comes in form of list of tuples, each tuple represents a row
+        return [row[0] for row in result]
+        
+        
+    def calculate_fp_growth(itemset:list[list[Any]]) -> pd.DataFrame:
+        te = TransactionEncoder()
+        te_ary = te.fit(itemset).transform(itemset)
+        df = pd.DataFrame(te_ary, columns=te.columns_)
+        fp_res = fpgrowth(df, min_support=0.6, use_colnames=True)
+        fp_res_filtered = fp_res[fp_res['itemsets'].apply(lambda x: len(x) >= 2)]
+        return fp_res_filtered
 
+
+    def transform_fp_growth(fp_dataframe:pd.DataFrame):
+        edges = []
+        for _, row in fp_dataframe.iterrows():
+            support = row["support"]
+            itemset = row["itemsets"]
+            if len(itemset) > 1:  # Only consider itemsets with >1 item
+                for pair in combinations(itemset, 2):
+                    edges.append((pair[0], pair[1], support))
+        res = pd.DataFrame(edges, columns=["source", "target", "support"])
+        return res
+    
+    def load_batch(cur, stmt, chunk:pd.DataFrame):
+            values = [tuple(row) for row in chunk.itertuples(index=False)]
+            execute_values(cur, stmt, values)
+            
+    @task
+    def generate_fp_growth_report():
+        pg_hook = PostgresHook(postgres_conn_id=POSTGRESQL_CONNECTION_ID)
+        
+        upstream_data = fetch_upstream_data()
+        fp_edges_support_df = transform_fp_growth(
+            calculate_fp_growth(upstream_data)
+        )
+        
+        chunk_size = 1000
+        chunks = [fp_edges_support_df.iloc[i:i + chunk_size] for i in range(0, len(fp_edges_support_df), chunk_size)]
+
+        stmt = None
+        with open(FP_GROWTH_REPORT_SQL, 'r') as f:
+            stmt = f.read()
+        
+        if not stmt or len(stmt) == 0:
+            raise Exception(f"fp growth SQL can't be `empty string` or `None`")
+        
+        with pg_hook.get_conn() as conn:
+            with conn.cursor() as cur:
+                for chunk in chunks:
+                    load_batch(cur, chunk, stmt)
+            conn.commit()
+
+    generate_fp_growth_report()
 build_report()
