@@ -73,6 +73,28 @@ CREATE TABLE IF NOT EXISTS staging.gsearch_jobs (
 CREATE INDEX IF NOT EXISTS idx_tags_embedding ON warehouse.tags_dim USING ivfflat (embedding);
 
 
+CREATE TABLE IF NOT EXISTS warehouse.reduced_tags_jobs_fact (
+    job_id BIGSERIAL PRIMARY KEY,
+    tags_list INT[],
+    job_title_id SMALLINT,
+    seniority_id SMALLINT,
+    updated_at TIMESTAMP,
+    CONSTRAINT fk_titles FOREIGN KEY (job_title_id) REFERENCES warehouse.titles (title_id) ON DELETE CASCADE,
+    CONSTRAINT fk_seniority FOREIGN KEY (seniority_id) REFERENCES warehouse.seniority (seniority_id) ON DELETE CASCADE
+);
+
+
+CREATE TABLE IF NOT EXISTS warehouse.tags_fp_growth (
+    source_tag BIGINT NOT NULL,
+    target_tag BIGINT NOT NULL,
+    m_support FLOAT NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_DATE,
+    CONSTRAINT fk_source_tag FOREIGN KEY (source_tag) REFERENCES warehouse.tags_dim (tag_id) ON DELETE CASCADE,
+    CONSTRAINT fk_target_tag FOREIGN KEY (target_tag) REFERENCES warehouse.tags_dim (tag_id) ON DELETE CASCADE,
+    PRIMARY KEY (source_tag, target_tag)
+);
+
+DROP TABLE warehouse.tags_fp_growth ;
 INSERT INTO warehouse.titles (title)
 SELECT seed_titles
 FROM (
