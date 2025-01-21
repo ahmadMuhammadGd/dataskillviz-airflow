@@ -17,8 +17,10 @@ and stored in `warehouse.tags_fp_growth`.
 
 from psycopg2.extras import execute_values
 import pandas as pd 
+import logging
 from mlxtend.frequent_patterns import fpgrowth
 from mlxtend.preprocessing import TransactionEncoder
+
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from includes.global_variables.gsearch import (
     POSTGRESQL_CONNECTION_ID,
@@ -51,6 +53,7 @@ default_args = {
     doc_md=doc
 )
 def build_report():
+    @task
     def fetch_upstream_data() -> list[list[int]]:
         '''
         read tags_list from tags_jobs_reduced table
@@ -67,44 +70,47 @@ def build_report():
             cur.execute(sql)
             result = cur.fetchall()
         # result comes in form of list of tuples, each tuple represents a row
-        return [row[0] for row in result]
+        result = [row[0] for row in result]
+        logging.info(f"feched data sample: {result[:3]} ..")
+        return result
         
-        
+    @task
     def calculate_fp_growth(itemset:list[list[Any]]) -> pd.DataFrame:
+        n_transactions = len(itemset)
         te = TransactionEncoder()
         te_ary = te.fit(itemset).transform(itemset)
         df = pd.DataFrame(te_ary, columns=te.columns_)
-        fp_res = fpgrowth(df, min_support=0.6, use_colnames=True)
+        fp_res = fpgrowth(df, min_support=0.1, use_colnames=True)
         fp_res_filtered = fp_res[fp_res['itemsets'].apply(lambda x: len(x) >= 2)]
-        return fp_res_filtered
+        return fp_res
 
 
-    def transform_fp_growth(fp_dataframe:pd.DataFrame):
+    @task
+    def transform_fp_growth_to_graph(fp_dataframe:pd.DataFrame):
         edges = []
         for _, row in fp_dataframe.iterrows():
             support = row["support"]
             itemset = row["itemsets"]
-            if len(itemset) > 1:  # Only consider itemsets with >1 item
-                for pair in combinations(itemset, 2):
-                    edges.append((pair[0], pair[1], support))
+            for pair in combinations(itemset, 2):
+                edges.append((pair[0], pair[1], support))
         res = pd.DataFrame(edges, columns=["source", "target", "support"])
+        logging.info(f"fp growth source, target, support list: {edges}")
         return res
     
-    def load_batch(cur, stmt, chunk:pd.DataFrame):
-            values = [tuple(row) for row in chunk.itertuples(index=False)]
-            execute_values(cur, stmt, values)
+    
             
     @task
-    def generate_fp_growth_report():
+    def load_fp_growth_report(edges:pd.DataFrame):
+        grouped_edges=edges.groupby(["source", "target"]).mean().reset_index()
+
+        def load_batch(cur, stmt, chunk:pd.DataFrame):
+            values = [tuple(row) for row in chunk.itertuples(index=False)]
+            execute_values(cur, stmt, values)
+        
         pg_hook = PostgresHook(postgres_conn_id=POSTGRESQL_CONNECTION_ID)
         
-        upstream_data = fetch_upstream_data()
-        fp_edges_support_df = transform_fp_growth(
-            calculate_fp_growth(upstream_data)
-        )
-        
         chunk_size = 1000
-        chunks = [fp_edges_support_df.iloc[i:i + chunk_size] for i in range(0, len(fp_edges_support_df), chunk_size)]
+        chunks = [grouped_edges.iloc[i:i + chunk_size] for i in range(0, len(grouped_edges), chunk_size)]
 
         stmt = None
         with open(FP_GROWTH_REPORT_SQL, 'r') as f:
@@ -116,8 +122,18 @@ def build_report():
         with pg_hook.get_conn() as conn:
             with conn.cursor() as cur:
                 for chunk in chunks:
-                    load_batch(cur, chunk, stmt)
+                    load_batch(cur, stmt, chunk)
             conn.commit()
 
-    generate_fp_growth_report()
+
+
+    task_get_upstream_data              = fetch_upstream_data()
+    task_calculate_fp_growth            = calculate_fp_growth(task_get_upstream_data)
+    task_transform_fp_growth_to_graph   = transform_fp_growth_to_graph(task_calculate_fp_growth)
+    task_load_fp_growth_report          = load_fp_growth_report(task_transform_fp_growth_to_graph)
+    
+
+    task_get_upstream_data              >>      task_calculate_fp_growth
+    task_calculate_fp_growth            >>      task_transform_fp_growth_to_graph
+    task_transform_fp_growth_to_graph   >>      task_load_fp_growth_report
 build_report()
