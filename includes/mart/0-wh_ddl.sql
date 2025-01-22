@@ -94,7 +94,6 @@ CREATE TABLE IF NOT EXISTS warehouse.tags_fp_growth (
     PRIMARY KEY (source_tag, target_tag)
 );
 
-DROP TABLE warehouse.tags_fp_growth ;
 INSERT INTO warehouse.titles (title)
 SELECT seed_titles
 FROM (
