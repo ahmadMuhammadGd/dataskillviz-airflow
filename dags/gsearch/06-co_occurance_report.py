@@ -22,6 +22,8 @@ from mlxtend.frequent_patterns import fpgrowth
 from mlxtend.preprocessing import TransactionEncoder
 
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.providers.postgres.operators.postgres import PostgresOperator
+
 from includes.global_variables.gsearch import (
     POSTGRESQL_CONNECTION_ID,
     FP_GROWTH_REPORT_SQL,
@@ -80,7 +82,7 @@ def build_report():
         te = TransactionEncoder()
         te_ary = te.fit(itemset).transform(itemset)
         df = pd.DataFrame(te_ary, columns=te.columns_)
-        fp_res = fpgrowth(df, min_support=0.1, use_colnames=True)
+        fp_res = fpgrowth(df, min_support=0.005, use_colnames=True)
         fp_res_filtered = fp_res[fp_res['itemsets'].apply(lambda x: len(x) >= 2)]
         return fp_res
 
@@ -98,7 +100,13 @@ def build_report():
         return res
     
     
-            
+    task_truncate_fp_growth = PostgresOperator(
+        task_id='truncate_fp_growth',
+        sql="TRUNCATE TABLE warehouse.tags_fp_growth;",
+        postgres_conn_id=POSTGRESQL_CONNECTION_ID,
+        autocommit=True  
+    )
+
     @task
     def load_fp_growth_report(edges:pd.DataFrame):
         grouped_edges=edges.groupby(["source", "target"]).mean().reset_index()
@@ -135,5 +143,6 @@ def build_report():
 
     task_get_upstream_data              >>      task_calculate_fp_growth
     task_calculate_fp_growth            >>      task_transform_fp_growth_to_graph
-    task_transform_fp_growth_to_graph   >>      task_load_fp_growth_report
+    task_transform_fp_growth_to_graph   >>      task_truncate_fp_growth
+    task_truncate_fp_growth             >>      `task_load_fp_growth_report`
 build_report()
