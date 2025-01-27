@@ -144,5 +144,5 @@ def build_report():
     task_get_upstream_data              >>      task_calculate_fp_growth
     task_calculate_fp_growth            >>      task_transform_fp_growth_to_graph
     task_transform_fp_growth_to_graph   >>      task_truncate_fp_growth
-    task_truncate_fp_growth             >>      `task_load_fp_growth_report`
+    task_truncate_fp_growth             >>      task_load_fp_growth_report
 build_report()
