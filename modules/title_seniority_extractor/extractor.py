@@ -7,7 +7,7 @@ class Extractor(ABC):
     
 
 class Regex_extractor(Extractor):
-    def extract(self, title:str, description:str) -> tuple[str, str]:
+    def extract(self, title: str, description: str) -> tuple[str, str]:
         """
         returns: (job_title, seniority)
         """
@@ -38,14 +38,14 @@ class Regex_extractor(Extractor):
 
         seniority_patterns = {
             "title": {
-                "Junior"    : '|'.join([junior_pattern["title_roles"], junior_pattern["level_indicators"]]),
-                "Mid-level" : '|'.join([midlevel_pattern["title_roles"], midlevel_pattern["level_indicators"]]),
-                "Senior"    : '|'.join([senior_pattern["title_roles"], senior_pattern["level_indicators"]]),
+                "Junior": r"(?i)\b(junior|jr|graduate|entry|fresh|trainee|level 1|l1|grade 1|I)\b",
+                "Mid-level": r"(?i)\b(mid|intermediate|level 2|l2|grade 2|II)\b",
+                "Senior": r"(?i)\b(senior|sr|lead|principal|staff|architect|level 3|l3|grade 3|III)\b",
             },
             "description": {
-                "Junior"    : junior_pattern["years_exp"],
-                "Mid-level" : midlevel_pattern["years_exp"],
-                "Senior"    : senior_pattern["years_exp"],
+                "Junior": r"(?i)\b([0-2])\+?\s*years?(.*experience)?\b",
+                "Mid-level": r"(?i)\b([2-4])\+?\s*years?(.*experience)?\b",
+                "Senior": r"(?i)\b([5-9]|10)\+?\s*years?(.*experience)?\b",
             }
         }
 
@@ -53,16 +53,19 @@ class Regex_extractor(Extractor):
         job_title = "Not Specified"
         seniority = "Not Specified"
 
+        # Check job roles from title
         for role, pattern in role_patterns.items():
             if re.search(pattern, title):
                 job_title = role
                 break
 
+        # Check seniority from title
         for level, pattern in seniority_patterns["title"].items():
             if re.search(pattern, title):
                 seniority = level
                 break
 
+        # Check seniority from description if not found in title
         if seniority == "Not Specified":
             for level, pattern in seniority_patterns["description"].items():
                 if re.search(pattern, description):

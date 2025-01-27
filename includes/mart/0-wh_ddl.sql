@@ -18,7 +18,7 @@ $$;
 CREATE TABLE IF NOT EXISTS warehouse.tags_dim (
     tag_id BIGSERIAL PRIMARY KEY,
     tag VARCHAR(32) UNIQUE NOT NULL,
-    embedding VECTOR(200) NOT NULL
+    embedding VECTOR(300) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS warehouse.titles (
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS warehouse.jobs_dim (
     source VARCHAR(512) NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS warehouse.tag_jobs_fact (
+CREATE TABLE IF NOT EXISTS warehouse.tags_jobs_fact (
     tag_id BIGINT NOT NULL,
     job_id BIGINT NOT NULL,
     job_title_id SMALLINT NOT NULL,
@@ -71,3 +71,51 @@ CREATE TABLE IF NOT EXISTS staging.gsearch_jobs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_tags_embedding ON warehouse.tags_dim USING ivfflat (embedding);
+
+
+CREATE TABLE IF NOT EXISTS warehouse.reduced_tags_jobs_fact (
+    job_id BIGSERIAL PRIMARY KEY,
+    tags_list INT[],
+    job_title_id SMALLINT,
+    seniority_id SMALLINT,
+    updated_at TIMESTAMP,
+    CONSTRAINT fk_titles FOREIGN KEY (job_title_id) REFERENCES warehouse.titles (title_id) ON DELETE CASCADE,
+    CONSTRAINT fk_seniority FOREIGN KEY (seniority_id) REFERENCES warehouse.seniority (seniority_id) ON DELETE CASCADE
+);
+
+
+CREATE TABLE IF NOT EXISTS warehouse.tags_fp_growth (
+    source_tag BIGINT NOT NULL,
+    target_tag BIGINT NOT NULL,
+    m_support FLOAT NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_DATE,
+    CONSTRAINT fk_source_tag FOREIGN KEY (source_tag) REFERENCES warehouse.tags_dim (tag_id) ON DELETE CASCADE,
+    CONSTRAINT fk_target_tag FOREIGN KEY (target_tag) REFERENCES warehouse.tags_dim (tag_id) ON DELETE CASCADE,
+    PRIMARY KEY (source_tag, target_tag)
+);
+
+INSERT INTO warehouse.titles (title)
+SELECT seed_titles
+FROM (
+    VALUES
+        ('Data Engineer'),
+        ('Data Analyst'),
+        ('Data Scientist'),
+        ('Not Specified')
+) AS seed(seed_titles)
+WHERE NOT EXISTS (
+    SELECT 1 FROM warehouse.titles t WHERE t.title = seed.seed_titles
+);
+
+INSERT INTO warehouse.seniority (seniority)
+SELECT seed_seniority
+FROM (
+    VALUES
+        ('Junior'),
+        ('Mid-level'),
+        ('Senior'),
+        ('Not Specified')
+) AS seed(seed_seniority)
+WHERE NOT EXISTS (
+    SELECT 1 FROM warehouse.seniority s WHERE s.seniority = seed.seed_seniority
+);

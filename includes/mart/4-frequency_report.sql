@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW frequency_report AS 
+CREATE OR REPLACE VIEW warehouse.frequency_report AS 
 SELECT 
     f.tag_id
     , td.tag
@@ -6,7 +6,7 @@ SELECT
     , tl.title 
     , COUNT(*) as occurance
 FROM
-    warehouse.tag_jobs_fact f 
+    warehouse.tags_jobs_fact f 
 LEFT JOIN 
     warehouse.tags_dim td 
 ON
@@ -23,4 +23,4 @@ GROUP BY
     f.tag_id
     , td.tag
     , sl.seniority
-    , tl.title
+    , tl.title;
