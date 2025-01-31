@@ -59,7 +59,7 @@ def stage():
                     lambda row: title_seniority_extractor.extract(
                         row['title'], 
                         row['description']
-                    ), 
+                    ) , 
                     axis=1, 
                     result_type="expand"
                 )

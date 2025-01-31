@@ -84,17 +84,21 @@ def ingest():
         max_date_in_staging_table = pd.to_datetime(max_date_in_staging_table)
         df['date_time'] = pd.to_datetime(df['date_time'])
         df = df[df['date_time'] > max_date_in_staging_table]
-        
+        df_rows_count = len(df.index)
         new_file_name = latest_file_path.replace('.csv', '_NEW_RECORDS.csv')
         df.to_csv(new_file_name, index=False)
         logging.info(f"Filtered data saved to: {new_file_name}")
     
-        return new_file_name
+        return new_file_name, df_rows_count
     
     @task(outlets=[SUCCESS_INGESTION_DATASET])
     def update_airflow_dataset(file_to_ingest:str, **context):
+        new_file_name, df_rows_count = file_to_ingest
         outlet_events = context["outlet_events"][SUCCESS_INGESTION_DATASET]
-        outlet_events.extra = {"file_to_ingest": file_to_ingest}
+        outlet_events.extra = {
+            "file_to_ingest": new_file_name, 
+            "rows_count": df_rows_count
+        }
     
     task_ingest_gsearch_csv     =   ingest_gsearch_csv()
     task_select_csv_file        =   select_csv_file()

@@ -12,21 +12,7 @@ SELECT
     se.seniority_id,
     CURRENT_TIMESTAMP AS updated_at
 FROM 
-    (
-    SELECT 
-        g.job_id,
-        g.source_job_id,
-        g.description_tokens
-    FROM 
-        warehouse.jobs_dim g
-    LEFT JOIN
-        warehouse.tags_jobs_fact d 
-    ON 
-        g.job_id = d.job_id 
-    WHERE
-        d.job_id IS NULL
-        AND g.source_job_id IS NOT NULL
-) as g
+    warehouse.jobs_dim g
 LEFT JOIN 
     staging.gsearch_jobs sg
     ON g.source_job_id = sg.source_job_id
@@ -40,4 +26,5 @@ JOIN
     warehouse.seniority se 
     ON se.seniority = sg.cleaned_seniority 
 WHERE
-	t.tag_id IS NOT NULL; 
+	t.tag_id IS NOT NULL
+ON CONFLICT (tag_id, job_id) DO NOTHING; 
