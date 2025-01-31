@@ -82,7 +82,12 @@ def build_report():
         te = TransactionEncoder()
         te_ary = te.fit(itemset).transform(itemset)
         df = pd.DataFrame(te_ary, columns=te.columns_)
-        fp_res = fpgrowth(df, min_support=0.005, use_colnames=True)
+        fp_res = fpgrowth(
+            df, 
+            min_support=0.005, 
+            use_colnames=True, 
+            max_len=2
+        )
         fp_res_filtered = fp_res[fp_res['itemsets'].apply(lambda x: len(x) >= 2)]
         return fp_res
 
