@@ -17,7 +17,7 @@ $$;
 
 CREATE TABLE IF NOT EXISTS warehouse.tags_dim (
     tag_id BIGSERIAL PRIMARY KEY,
-    tag VARCHAR(32) UNIQUE NOT NULL,
+    tag VARCHAR(64) UNIQUE NOT NULL,
     embedding VECTOR(300) NOT NULL
 );
 
